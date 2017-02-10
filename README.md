@@ -6,10 +6,11 @@ ___Generate GeoJSON from google spreadsheet___
 __Dependencies__
 
 Install node.js, if you don't already have it.
-Then run:
+Then, in this directory, run:
 ```js
 npm install
 ```
+to install dependencies
 
 __Google Sheets API__
 
