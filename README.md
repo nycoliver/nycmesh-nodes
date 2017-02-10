@@ -37,3 +37,7 @@ __Google Sheets API__
 npm start
 ```
 Writes a GeoJSON file to ./nodes.json
+
+### Panoramas
+
+The script will look for photos in the ./panoramas folder

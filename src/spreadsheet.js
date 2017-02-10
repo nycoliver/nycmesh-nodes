@@ -30,7 +30,7 @@ function generateJson() {
 
     fs.writeFile('./nodes.json', JSON.stringify(geojson, null, 2), function(err) {
       if (err) console.error("Error writing geojson", err)
-      else console.log("Written to ./nodes.json")
+      else console.log("GeoJSON written to ./nodes.json")
     })
   })
 }
