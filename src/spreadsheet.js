@@ -5,6 +5,8 @@ var moment = require('moment');
 
 var fs = require('fs');
 
+var coordinates = {};
+
 function setAuth(cb) {
   var creds = require('../credentials.json');
   console.log("Authorizing with sheets API...")
@@ -12,30 +14,89 @@ function setAuth(cb) {
 }
 
 function generateJson() {
-  console.log("Fetching sheet...")
+  console.log("Fetching nodes...")
   doc.getRows(3, function(err, rows) { //third worksheet is nodes
     if (err) {
       console.log(err)
       return
     }
 
-    console.log("Generating GeoJSON...")
-    var geojson = { "type": "FeatureCollection" }
+    var active = { "type": "FeatureCollection", "features": [] },
+      potential = { "type": "FeatureCollection", "features": [] };
 
-    geojson.features = rows.map(featureFromRow).filter(function(feature) {
-      if (!feature) return false
-      if (feature.properties.status == "Abandoned") return false
-      return true
+    var statusCounts = {}
+
+    var features = rows.map(pointFromRow).filter(removeAbandoned)
+
+    features.forEach((feature) => {
+      const { status, id } = feature.properties;
+      if (status == "Installed") {
+        active.features.push(feature)
+      } else {
+        potential.features.push(feature)
+      }
+      coordinates[id] = feature.geometry.coordinates;
+      statusCounts[status] = statusCounts[status]+1 || 1;
+      statusCounts['total'] = statusCounts['total']+1 || 1;
     })
 
-    fs.writeFile('./nodes.json', JSON.stringify(geojson, null, 2), function(err) {
-      if (err) console.error("Error writing geojson", err)
-      else console.log("GeoJSON written to ./nodes.json")
-    })
+    printStats(statusCounts)
+    generateLinks()
+    writeFile('./active.json', active)
+    writeFile('./potential.json', potential)
   })
 }
 
-function featureFromRow(row, index) {
+function printStats(statusCounts) {
+  console.log((statusCounts['total'] || 0)+' nodes ('+
+  (statusCounts['Installed'] || 0)+' active, '+
+  (statusCounts['Installation Scheduled'] || 0)+' scheduled, '+
+  (statusCounts['Interested'] || 0)+' interested, '+
+  (statusCounts[''] || 0)+' no status)')
+}
+
+function generateLinks() {
+  console.log("Fetching links...")
+  doc.getRows(4, function(err, rows) { //third worksheet is nodes
+    if (err) { console.log(err) return }
+    const links = { "type": "FeatureCollection", "features": rows.map(linkFromRow) };
+    writeFile('./links.json', links)
+  })
+}
+
+function removeAbandoned(feature) {
+  if (!feature) return false
+  if (feature.properties.status == "Abandoned") return false
+  return true
+}
+
+function writeFile(path, json) {
+  fs.writeFile(path, JSON.stringify(json), function(err) {
+    if (err) console.error("Error writing to " + path, err)
+    else console.log("GeoJSON written to " + path)
+  })
+}
+
+function linkFromRow(row) {
+  // get coordinates
+  // console.log(coordinates[row.from])
+  if (row && row.from && row.to && row.status) {
+    var feature = { "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          coordinates[row.from], coordinates[row.to]
+        ]
+      },
+      properties: {
+        status: row.status
+      }
+    }
+    return feature
+  }
+}
+
+function pointFromRow(row, index) {
 
   const { status, latlng, info, rooftopaccess } = row;
   const id = index+2; // correcting for title row and starts at 0
@@ -86,16 +147,6 @@ function featureFromRow(row, index) {
   }
 
   return feature;
-}
-
-function panoramasForNode() {
-
-}
-
-function addNode(data, cb) {
-  sheet.addRow(data, function(err) {
-    cb(err)
-  })
 }
 
 setAuth(generateJson)
