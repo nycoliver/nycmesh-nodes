@@ -2,3 +2,7 @@ credentials.json
 node_modules
 nodes.json
 .DS_Store
+active.json
+links.json
+panoramas/
+potential.json

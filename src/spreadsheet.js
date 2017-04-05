@@ -58,7 +58,7 @@ function printStats(statusCounts) {
 function generateLinks() {
   console.log("Fetching links...")
   doc.getRows(4, function(err, rows) { //third worksheet is nodes
-    if (err) { console.log(err) return }
+    if (err) { console.log(err); return }
     const links = { "type": "FeatureCollection", "features": rows.map(linkFromRow) };
     writeFile('./links.json', links)
   })
